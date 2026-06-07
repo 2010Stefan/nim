@@ -1,0 +1,46 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup Java
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v2
+
+    - name: Download Raylib for Android
+      run: |
+        wget https://github.com/raysan5/raylib/releases/download/5.0/raylib-5.0_android.zip
+        unzip raylib-5.0_android.zip -d raylib_android
+
+    - name: Compile C++ to APK
+      run: |
+        $ANDROID_HOME/ndk-bundle/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++ \
+        -target armv7a-linux-androideabi21 \
+        main.cpp \
+        -I raylib_android/include \
+        -L raylib_android/lib/armeabi-v7a \
+        -lraylib -landroid -llog -lEGL -lGLESv2 -lOpenSLES \
+        -shared -o libmain.so
+        
+    - name: Package APK
+      run: |
+        zip -r joc.apk libmain.so index.html
+
+    - name: Upload APK
+      uses: actions/upload-artifact@v3
+      with:
+        name: joc-android-apk
+        path: joc.apk
